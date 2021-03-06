@@ -22,15 +22,15 @@ import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletResponse
 import io.javalin.http.staticfiles.ResourceHandler as JavalinResourceHandler
 
-class JettyResourceHandler(val precompressStaticFiles: Boolean = false, private val aliasCheck: AliasCheck? = null) : JavalinResourceHandler {
+class JettyResourceHandler(val precompressStaticFiles: Boolean = false, private val aliasCheck: AliasCheck? = null, val devLogging: Boolean) : JavalinResourceHandler {
 
     val handlers = mutableListOf<ResourceHandler>()
 
     override fun addStaticFileConfig(config: StaticFileConfig) {
         handlers.add(when {
             config.path == "/webjars" -> WebjarHandler()
-            aliasCheck != null -> AliasHandler(config, aliasCheck)
-            else -> PrefixableHandler(config)
+            aliasCheck != null -> AliasHandler(config, aliasCheck, devLogging)
+            else -> PrefixableHandler(config, devLogging)
         }.apply { start() })
     }
 
@@ -73,12 +73,13 @@ private class WebjarHandler : ResourceHandler() {
     override fun getResource(path: String) = Resource.newClassPathResource("META-INF/resources$path") ?: super.getResource(path)
 }
 
-private open class PrefixableHandler(private val config: StaticFileConfig) : ResourceHandler() {
+private open class PrefixableHandler(private val config: StaticFileConfig, devLogging: Boolean) : ResourceHandler() {
 
     init {
         resourceBase = getResourceBase(config)
         isDirAllowed = false
         isEtags = true
+        if(devLogging)
         Javalin.log?.info("""Static file handler added:
         |    {urlPathPrefix: "${config.urlPathPrefix}", path: "${config.path}", location: Location.${config.location}}
         |    Resolved path: '${getResourceBase(config)}'
@@ -110,7 +111,7 @@ private open class PrefixableHandler(private val config: StaticFileConfig) : Res
 
 }
 
-private class AliasHandler(config: StaticFileConfig, private val aliasCheck: AliasCheck) : PrefixableHandler(config) {
+private class AliasHandler(config: StaticFileConfig, private val aliasCheck: AliasCheck, devLogging: Boolean) : PrefixableHandler(config, devLogging) {
     override fun getResource(path: String): Resource {  // if this method throws, we get a 404
         val resource = baseResource?.addPath(URIUtil.canonicalPath(path))!!
         if (!resource.isAlias) return super.getResource(path) // treat as prefixablehandler

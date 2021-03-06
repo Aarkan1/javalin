@@ -7,6 +7,7 @@
 
 package io.javalin;
 
+import express.Express;
 import io.javalin.apibuilder.ApiBuilder;
 import io.javalin.apibuilder.EndpointGroup;
 import io.javalin.core.JavalinConfig;
@@ -43,7 +44,7 @@ import org.slf4j.LoggerFactory;
 @SuppressWarnings("unchecked")
 public class Javalin {
 
-    public static Logger log = LoggerFactory.getLogger(Javalin.class);
+    public static Logger log = LoggerFactory.getLogger(Express.class);
 
     /**
      * Do not use this field unless you know what you're doing.
@@ -56,6 +57,10 @@ public class Javalin {
     protected JavalinServlet servlet = new JavalinServlet(config);
 
     protected EventManager eventManager = new EventManager();
+
+    {
+        System.setProperty("org.slf4j.simpleLogger.logFile", "System.out");
+    }
 
     protected Javalin() {
         this.server = new JavalinServer(config);
@@ -159,24 +164,24 @@ public class Javalin {
      * @see Javalin#create()
      */
     public Javalin start() {
-        Util.logJavalinBanner(this.config.showJavalinBanner);
         JettyUtil.disableJettyLogger();
-        long startupTimer = System.currentTimeMillis();
+//        long startupTimer = System.currentTimeMillis();
         if (server.getStarted()) {
             String message = "Server already started. If you are trying to call start() on an instance " +
-                "of Javalin that was stopped using stop(), please create a new instance instead.";
+                "of Express that was stopped using stop(), please create a new instance instead.";
             throw new IllegalStateException(message);
         }
         server.setStarted(true);
         Util.printHelpfulMessageIfLoggerIsMissing();
         eventManager.fireEvent(JavalinEvent.SERVER_STARTING);
         try {
-            Javalin.log.info("Starting Javalin ...");
+            if(config.devLogging) Javalin.log.info("Starting Express ...");
+            long startupTimer = System.currentTimeMillis();
             server.start(wsServlet);
-            Javalin.log.info("Javalin started in " + (System.currentTimeMillis() - startupTimer) + "ms \\o/");
+            if(config.devLogging) Javalin.log.info("Javalin started in " + (System.currentTimeMillis() - startupTimer) + "ms \\o/");
             eventManager.fireEvent(JavalinEvent.SERVER_STARTED);
         } catch (Exception e) {
-            Javalin.log.error("Failed to start Javalin");
+            Javalin.log.error("Failed to start Express");
             eventManager.fireEvent(JavalinEvent.SERVER_START_FAILED);
             if (Boolean.TRUE.equals(server.server().getAttribute("is-default-server"))) {
                 stop();// stop if server is default server; otherwise, the caller is responsible to stop
@@ -197,14 +202,14 @@ public class Javalin {
      * @return stopped application instance.
      */
     public Javalin stop() {
-        log.info("Stopping Javalin ...");
+        log.info("Stopping Express ...");
         eventManager.fireEvent(JavalinEvent.SERVER_STOPPING);
         try {
             server.server().stop();
         } catch (Exception e) {
-            log.error("Javalin failed to stop gracefully", e);
+            log.error("Express failed to stop gracefully", e);
         }
-        log.info("Javalin has stopped");
+        log.info("Express has stopped");
         eventManager.fireEvent(JavalinEvent.SERVER_STOPPED);
         return this;
     }

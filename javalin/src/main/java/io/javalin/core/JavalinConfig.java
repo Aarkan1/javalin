@@ -54,6 +54,7 @@ public class JavalinConfig {
     public boolean showJavalinBanner = true;
     public boolean logIfServerNotStarted = true;
     public boolean ignoreTrailingSlashes = true;
+    public boolean devLogging = false;
     @NotNull public String defaultContentType = "text/plain";
     @NotNull public String contextPath = "/";
     //Left for backwards compatibility, please use maxRequestSize instead
@@ -103,6 +104,7 @@ public class JavalinConfig {
     }
 
     public JavalinConfig enableDevLogging() {
+        devLogging = true;
         requestLogger(LogUtil::requestDevLogger);
         wsLogger(LogUtil::wsDevLogger);
         return this;
@@ -123,7 +125,7 @@ public class JavalinConfig {
     public JavalinConfig addStaticFiles(@NotNull String urlPathPrefix, @NotNull String path, @NotNull Location location) {
         JettyUtil.disableJettyLogger();
         if (inner.resourceHandler == null)
-            inner.resourceHandler = new JettyResourceHandler(precompressStaticFiles, aliasCheckForStaticFiles);
+            inner.resourceHandler = new JettyResourceHandler(precompressStaticFiles, aliasCheckForStaticFiles, devLogging);
         inner.resourceHandler.addStaticFileConfig(new StaticFileConfig(urlPathPrefix, path, location));
         return this;
     }
